@@ -1,5 +1,6 @@
 var tasks = {};
 
+//show task on the page
 var createTask = function (taskText, taskDate, taskList) {
   // create elements that make up a task item
   var taskLi = $("<li>").addClass("list-group-item");
@@ -13,8 +14,34 @@ var createTask = function (taskText, taskDate, taskList) {
   // append span and p element to parent li
   taskLi.append(taskSpan, taskP);
 
+  //check due date
+  auditTask(taskLi);
+
   // append to ul list on the page
   $("#list-" + taskList).append(taskLi);
+};
+
+//add due date audits
+var auditTask = function(taskEl) {
+  // A HTML created in JS, all attr & func about this <li> will show as property; the entire <li> is []
+  //get date from taskEL
+  var date = $(taskEl).find("span").text().trim();
+  console.log(date);
+
+  //convert to moment object at 5:00pm
+  var time = moment(date, "L").set("hour", 17);
+  //this should print out an object for the value of the date variable, but at 5pm of that date
+  console.log(time);
+
+  //remove any old classes from element
+  // $(taskEl).removeClass("list-group-item-warning list-group-item-danger")
+
+  //apply new class if task is near/over due date
+  if (moment().isAfter(time)){
+    $(taskEl).addClass("list-group-item-danger");
+  } else if (Math.abs(moment().diff(time, "days")) <= 2){
+    $(taskEl).addClass("list-group-item-warning");
+  }
 };
 
 var loadTasks = function () {
@@ -43,7 +70,6 @@ var loadTasks = function () {
 var saveTasks = function () {
   localStorage.setItem("tasks", JSON.stringify(tasks));
 };
-
 
 //1.1 - edit tasks when clicked
 $(".list-group").on("click", "p", function () {
@@ -106,11 +132,23 @@ $(".list-group").on("click", "span", function () {
     .val(date);
 
   $(this).replaceWith(dateInput);
+
+  //enable jquery ui datepicker
+  dateInput.datepicker({
+    // minDate: 1,
+    onClose: function () {
+      //when calendar is closed, force a "change" event on dateInput
+      $(this).trigger("change")
+    }
+  });
+
+  //automatically bring up the calendar
   dateInput.trigger("focus");
 })
 
-//1.2 - save new dates when blur event occurs
-$(".list-group").on("blur", "input[type='text']", function () {
+//1.2 - save new dates when blur event occurs 
+//4.1 - change blur to change once implemented datepicker
+$(".list-group").on("change", "input[type='text']", function () {
   var date = $(this).val().trim();
   var status = $(this)
     .closest(".list-group")
@@ -129,6 +167,9 @@ $(".list-group").on("blur", "input[type='text']", function () {
     .text(date);
 
   $(this).replaceWith(taskSpan);
+
+  //pass task's <li> element into auditTask() to check new due date
+  auditTask($(taskSpan).closest(".list-group-item"));
 })
 
 // modal was triggered
@@ -143,7 +184,7 @@ $("#task-form-modal").on("shown.bs.modal", function () {
   $("#modalTaskDescription").trigger("focus");
 });
 
-// save button in modal was clicked
+// get and push task(obj) into tasks(arr) when save button in modal was clicked; 
 $("#task-form-modal .btn-primary").click(function () {
   // get form values
   var taskText = $("#modalTaskDescription").val();
@@ -177,6 +218,7 @@ $("#remove-tasks").on("click", function () {
 // load tasks for the first time
 loadTasks();
 
+// add sortable to <ul>
 $(".card .list-group").sortable({
   connectWith: $(".card .list-group"),
   scroll: false,
@@ -222,23 +264,31 @@ $(".card .list-group").sortable({
       .attr("id")
       .replace("list-", "");
 
+      console.log("arrName", arrName);
+
     //update array on tasks object and save
     tasks[arrName] = tempArr;
     saveTasks();
   }
 });
 
+// add droppable 
 $("#trash").droppable({
-  accept:".card .list-group-item",
-  tolerence:"touch",
-  drop: function(event, ui){
+  accept: ".card .list-group-item",
+  tolerence: "touch",
+  drop: function (event, ui) {
     console.log("drop");
     ui.draggable.remove();
   },
-  over: function(event, ui){
+  over: function (event, ui) {
     console.log("over");
   },
-  out:function(event, ui){
+  out: function (event, ui) {
     console.log("out");
   }
+});
+
+//add date picker
+$("#modalDueDate").datepicker({
+  // minDate: 1
 });
